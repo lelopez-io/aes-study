@@ -1,6 +1,6 @@
 # General
 .DS_Store
-bin/
+.vscode/
 
 # Prerequisites
 *.d
