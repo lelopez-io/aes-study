@@ -5,8 +5,8 @@
   > main
 
   How to compile and run on OSX:
-  $ clang main.c -o main
-  $ ./main
+  $ clang main.c -o ./bin/main
+  $ ./bin/main
 
  */
 
