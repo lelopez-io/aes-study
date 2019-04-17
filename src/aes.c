@@ -221,20 +221,11 @@ void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key)
   KeyExpansion(ctx->RoundKey, key);
 }
 
+
+
+
 // This function adds the round key to state.
 // The round key is added to the state by an XOR function.
-static void printState(state_t* state){
-  uint8_t i, j;
-  for (i = 0; i < 4; ++i)
-  {
-    for (j = 0; j < 4; ++j)
-    {
-      printf("%.2x ",(*state)[j][i]);
-    }
-    printf("\n");
-  }
-}
-
 static void AddRoundKey(uint8_t round,state_t* state,uint8_t* RoundKey)
 {
   uint8_t i,j;
@@ -397,9 +388,25 @@ static void InvShiftRows(state_t* state)
   (*state)[3][3] = temp;
 }
 
-
+/*****************************************************************************/
+/* Print function:                                                         */
+/*****************************************************************************/
 bool printDemo = true;
-// Cipher is the main function that encrypts the PlainText.
+static void printState(state_t* state){
+  uint8_t i, j;
+  for (i = 0; i < 4; ++i)
+  {
+    for (j = 0; j < 4; ++j)
+    {
+      printf("%c ",(*state)[j][i]);
+    }
+    printf("\n");
+  }
+}
+
+/*****************************************************************************/
+/* Cipher functions:                                                         */
+/*****************************************************************************/
 static void Cipher(state_t* state, uint8_t* RoundKey)
 {
   uint8_t round = 0;
