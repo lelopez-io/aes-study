@@ -1,25 +1,9 @@
 /*
-This is an implementation of the AES algorithm, specifically ECB, CTR and CBC mode.
-Block size can be chosen in aes.h - available choices are AES128, AES192, AES256.
-The implementation is verified against the test vectors in:
-  National Institute of Standards and Technology Special Publication 800-38A 2001 ED
-ECB-AES128
-----------
-  plain-text:
-    6bc1bee22e409f96e93d7e117393172a
-    ae2d8a571e03ac9c9eb76fac45af8e51
-    30c81c46a35ce411e5fbc1191a0a52ef
-    f69f2445df4f9b17ad2b417be66c3710
-  key:
-    2b7e151628aed2a6abf7158809cf4f3c
-  resulting cipher
-    3ad77bb40d7a3660a89ecaf32466ef97
-    f5d3d58503b9699de785895a96fdbaaf
-    43b1cd7f598ece23881b00e3ed030688
-    7b0c785e27e8ad3f8223207104725dd4
+This is an implementation of the AES algorithm, specifically ECB.
+Block size can be chosen in aes.h - available choices are AES128.
+
 NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
         You should pad the end of the string with zeros if this is not the case.
-        For AES192/256 the key size is proportionally larger.
 */
 
 
@@ -29,7 +13,7 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <string.h> // CBC mode, for memset
+#include <string.h> 
 #include "aes.h"
 
 
@@ -37,27 +21,9 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 /* Defines:                                                                  */
 /*****************************************************************************/
 // The number of columns comprising a state in AES. This is a constant in AES. Value=4
-#define Nb 4
-
-#if defined(AES256) && (AES256 == 1)
-    #define Nk 8
-    #define Nr 14
-#elif defined(AES192) && (AES192 == 1)
-    #define Nk 6
-    #define Nr 12
-#else
-    #define Nk 4        // The number of 32 bit words in a key.
-    #define Nr 10       // The number of rounds in AES Cipher.
-#endif
-
-// jcallan@github points out that declaring Multiply as a function
-// reduces code size considerably with the Keil ARM compiler.
-// See this link for more information: https://github.com/kokke/tiny-AES-C/pull/3
-#ifndef MULTIPLY_AS_A_FUNCTION
-  #define MULTIPLY_AS_A_FUNCTION 0
-#endif
-
-
+#define Nb 4      
+#define Nk 4        // The number of 32 bit words in a key.
+#define Nr 10       // The number of rounds in AES Cipher.
 
 
 /*****************************************************************************/
@@ -112,17 +78,6 @@ static const uint8_t rsbox[256] = {
 // x to the power (i-1) being powers of x (x is denoted as {02}) in the field GF(2^8)
 static const uint8_t Rcon[11] = {
   0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36 };
-
-/*
- * Jordan Goulder points out in PR #12 (https://github.com/kokke/tiny-AES-C/pull/12),
- * that you can remove most of the elements in the Rcon array, because they are unused.
- *
- * From Wikipedia's article on the Rijndael key schedule @ https://en.wikipedia.org/wiki/Rijndael_key_schedule#Rcon
- *
- * "Only the first some of these constants are actually used – up to rcon[10] for AES-128 (as 11 round keys are needed),
- *  up to rcon[8] for AES-192, up to rcon[7] for AES-256. rcon[0] is not used in AES algorithm."
- */
-
 
 /*****************************************************************************/
 /* Private functions:                                                        */
@@ -196,18 +151,6 @@ static void KeyExpansion(uint8_t* RoundKey, const uint8_t* Key)
 
       tempa[0] = tempa[0] ^ Rcon[i/Nk];
     }
-#if defined(AES256) && (AES256 == 1)
-    if (i % Nk == 4)
-    {
-      // Function Subword()
-      {
-        tempa[0] = getSBoxValue(tempa[0]);
-        tempa[1] = getSBoxValue(tempa[1]);
-        tempa[2] = getSBoxValue(tempa[2]);
-        tempa[3] = getSBoxValue(tempa[3]);
-      }
-    }
-#endif
     j = i * 4; k=(i - Nk) * 4;
     RoundKey[j + 0] = RoundKey[k + 0] ^ tempa[0];
     RoundKey[j + 1] = RoundKey[k + 1] ^ tempa[1];
@@ -220,9 +163,6 @@ void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key)
 {
   KeyExpansion(ctx->RoundKey, key);
 }
-
-
-
 
 // This function adds the round key to state.
 // The round key is added to the state by an XOR function.
@@ -304,17 +244,6 @@ static void MixColumns(state_t* state)
   }
 }
 
-// Multiply is used to multiply numbers in the field GF(2^8)
-#if MULTIPLY_AS_A_FUNCTION
-static uint8_t Multiply(uint8_t x, uint8_t y)
-{
-  return (((y & 1) * x) ^
-       ((y>>1 & 1) * xtime(x)) ^
-       ((y>>2 & 1) * xtime(xtime(x))) ^
-       ((y>>3 & 1) * xtime(xtime(xtime(x)))) ^
-       ((y>>4 & 1) * xtime(xtime(xtime(xtime(x))))));
-  }
-#else
 #define Multiply(x, y)                                \
       (  ((y & 1) * x) ^                              \
       ((y>>1 & 1) * xtime(x)) ^                       \
@@ -322,7 +251,6 @@ static uint8_t Multiply(uint8_t x, uint8_t y)
       ((y>>3 & 1) * xtime(xtime(xtime(x)))) ^         \
       ((y>>4 & 1) * xtime(xtime(xtime(xtime(x))))))   \
 
-#endif
 
 // MixColumns function mixes the columns of the state matrix.
 // The method used to multiply may be difficult to understand for the inexperienced.
@@ -389,16 +317,17 @@ static void InvShiftRows(state_t* state)
 }
 
 /*****************************************************************************/
-/* Print function:                                                         */
+/* Print function:    %c OR %.2x                                             */
 /*****************************************************************************/
 bool printDemo = true;
 static void printState(state_t* state){
-  uint8_t i, j;
+  unsigned char i, j;
+
   for (i = 0; i < 4; ++i)
   {
     for (j = 0; j < 4; ++j)
     {
-      printf("%c ",(*state)[j][i]);
+      printf("%.2x ",(*state)[j][i]);
     }
     printf("\n");
   }
@@ -516,8 +445,6 @@ static void InvCipher(state_t* state,uint8_t* RoundKey)
 /*****************************************************************************/
 /* Public functions:                                                         */
 /*****************************************************************************/
-#if defined(ECB) && (ECB == 1)
-
 
 void AES_ECB_encrypt(struct AES_ctx* ctx, uint8_t* buf)
 {
@@ -530,6 +457,3 @@ void AES_ECB_decrypt(struct AES_ctx* ctx, uint8_t* buf)
   // The next function call decrypts the PlainText with the Key using AES algorithm.
   InvCipher((state_t*)buf, ctx->RoundKey);
 }
-
-
-#endif // #if defined(ECB) && (ECB == 1)
