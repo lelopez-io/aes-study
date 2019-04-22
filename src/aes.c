@@ -223,6 +223,8 @@ static void ShiftRows(state_t* state)
   (*state)[1][3] = temp;
 }
 
+// xtime is a macro that finds the product of {02} and the argument to
+// xtime modulo {1b}  
 static uint8_t xtime(uint8_t x)
 {
   return ((x<<1) ^ (((x>>7) & 1) * 0x1b));
